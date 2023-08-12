@@ -1,0 +1,12 @@
+services:
+
+  run-python-script:
+    build: ./
+    # Mount project directory inside the container to sync both directories
+    # Format is HOST_DIRECTORY_TO_MOUNT:TARGET_DIRECTORY_IN_CONTAINER_
+    volumes:
+      
+      - ./:/noccodeproject/
+      # Windows
+      # - 'C:\Users\path\to\noccodeproject:/noccodeproject/'
+      
