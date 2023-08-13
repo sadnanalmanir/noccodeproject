@@ -50,6 +50,8 @@ TEXT = open(here() / 'resources' / 'nocjobtitle.txt').read()
 
 # set the title of the sheet to process
 #SHEET_TITLE = 'Sheet1'
+#SHEET_TITLE = 'Sheet_V4_Run_not_a_match_split_title'
+#SHEET_TITLE = 'Sheet_V4_Run_match_split_title'
 #SHEET_TITLE = 'Managers in Agriculture'
 SHEET_TITLE = 'Service Advisor'
 #SHEET_TITLE = 'Account Manager'
@@ -63,7 +65,7 @@ SHEET_TITLE = 'Service Advisor'
 #SHEET_TITLE = 'Transport truck drivers'
 #SHEET_TITLE = 'Other professional engineers'
 #SHEET_TITLE = 'Janitors, caretakers etc'
-#SHEET_TITLE = 'Delivery& courier service drive'
+#SHEET_TITLE = 'Delivery& courier service driver'
 #SHEET_TITLE = 'Central control process oper'
 #SHEET_TITLE = 'Automotive services tech. etc'
 #SHEET_TITLE = 'light duty cleaners'
@@ -714,7 +716,6 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
         current_industry = df_excel.loc[df_excel.index[i], 'Current Industry']
         try:
             if run_note == SPLIT_TITLE or run_note == SPLIT_INDUSTRY:
-
                 if '/' in current_job_title:
                     current_job_titles = current_job_title.split('/')
                 elif '-' in current_job_title:
@@ -727,6 +728,7 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                     for j in range(len(df)):
                         noc_code_source = df.loc[df.index[j], 'Noc_code']
                         if current_job_titles[k].strip(' '):
+
                             if match_type == 2:  # minor spelling error match
                                 result = minor_exact_match(
                                     correct_text(current_job_titles[k]).strip(' ').replace(')', '').lower(),
@@ -735,34 +737,56 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                                 result = like_match(
                                     correct_text(current_job_titles[k]).strip(' ').replace(')', '').lower(),
                                     df.loc[df.index[j], 'job_title'].lower())
+                            elif match_type == 4:  # near match same order
+                                result = near_match_sameorder(
+                                    correct_text(current_job_titles[k]).strip(' ').replace(')', '').lower(),
+                                    df.loc[df.index[j], 'job_title'].lower())
+                            elif match_type == 5:  # near match different order
+                                result = near_match_differentorder(
+                                    correct_text(current_job_titles[k]).strip(' ').replace(')', '').lower(),
+                                    df.loc[df.index[j], 'job_title'].lower())
+                            elif match_type == 6:  # search description
+                                result = any_match(
+                                    correct_text(current_job_titles[k]).strip(' ').replace(')', '').lower(),
+                                    df.loc[df.index[j], 'job_title'].lower())
+                            #elif match_type == 7:  # near match different order
+                            #    result = search_description(
+                            #        correct_text(current_job_titles[k]).strip(' ').replace(')', '').lower(),
+                            #        df.loc[df.index[j], 'job_title'].lower())
                             else:
-                                result = exact_match(
+                                result = weak_match(
                                     correct_text(current_job_titles[k]).strip(' ').replace(')', '').lower(),
                                     df.loc[df.index[j], 'job_title'].lower())
 
                         if result:
                             result.append(noc_code_source)
-                            if match_split_result_desc(result,
-                                                       current_industry.lower()):  # industry is also in description
-                                match_result.append(result)
-                                current_job_title = current_job_titles[k]  # search key values
+                            #print(current_job_titles[k].strip(' '), ' @@@ result ', result)
+                            match_result.append(result)
+                            #if match_split_result_desc(result,
+                            #                           current_industry.lower()):  # industry is also in description
+                            #    match_result.append(result)
+                            #    print(current_job_titles[k].strip(' '), ' @@@ match result ', match_result)
+                            #    current_job_title = current_job_titles[k]  # search key values
+
                                 # print('match_type',match_type,current_job_title,result)
-                                break
-                            else:
-                                split_title_result.append(result)
-                                split_title_idx.append(k)
-                    # FIX @@@ This break has to be brought back early, or combine results from all pervious iterations
+                            #    break
+                            #else:
+                            #    split_title_result.append(result)
+                            #    split_title_idx.append(k)
+                    # FIX @@@ This break has to be brought back early, or combine results from all previous iterations
                     # and store them into match_results @@@
                     # This is an extra step at the end when it imposes break. The problem is that if the previous
                     # iteration has any candidate in match_results, then the current iteration will find all
                     # candidates but will break out because the if condition will be true. This only works if the previous
                     # iteration does not produce anything inside match_results
-                    if match_result:
-                        break  # FIX @@@ Does this mean the loop stops once there is a candidate for a single iteration? @@@
-                    elif split_title_result:
+
+                    #if match_result:
+                    #    break  # FIX @@@ Does this mean the loop stops once there is a candidate for a single iteration? @@@
+                    #if split_title_result:
+                    #    print('@@@ --', split_title_result)
                         # FIX @@@ This choice of result is based on nothing, just picking the first one without any context @@@
-                        match_result.append(split_title_result[0])
-                        current_job_title = current_job_titles[split_title_idx[0]]  # search key values
+                    #    match_result.append(split_title_result[0])
+                    #    current_job_title = current_job_titles[split_title_idx[0]]  # search key values
             else:
 
                 for j in range(len(df)):
@@ -967,7 +991,7 @@ start = time.time()
 df_skilltype = pd.read_csv(here() / 'resources' / 'NOC_skilltype.csv')
 df_mag = pd.read_csv(here() / 'resources' / 'NOC_majorgroup.csv')
 df_mig = pd.read_csv(here() / 'resources' / 'NOC_minorgroup.csv')
-# select SHEET_TITLE
+
 df_excel = pd.read_excel(file, sheet_name=SHEET_TITLE, header=0,
                          converters={'NOC code': str, 'Current Job Title': str, 'Current Industry': str},
                          na_filter=False)  # ,na_filter = False
@@ -992,7 +1016,7 @@ for i in range(1, 8):
         df_empty = df_re.loc[df_re['NOC code by program'] == '']
         df_re = get_noc_code(df_excel=df_empty, df_re=df_re, match_type=i, run_note=ORIGINAL)
 
-    # second search, split tilte, exact match
+    # second search, split title, exact match
     df_empty = df_re.loc[df_re['NOC code by program'] == '']
     df_split_title = df_empty.loc[df_empty['Current Job Title'].str.contains('-|/|,|\(', regex=True)]
     df_re = get_noc_code(df_excel=df_split_title, df_re=df_re, match_type=i, run_note=SPLIT_TITLE)
@@ -1028,7 +1052,7 @@ for i in range(1, 8):
     df_empty = get_sub_df(df_re.loc[df_re['NOC code by program'] == ''], BY_INDUSTRY)
     df_re = get_noc_code(df_excel=df_empty, df_re=df_re, match_type=i, run_note=BY_INDUSTRY)
 
-    # search by spliting industry
+    # search by splitting industry
     df_empty = df_re.loc[df_re['NOC code by program'] == '']
     df_need_split_industry = df_empty.loc[df_empty['Current Industry'].str.contains('-|/|,|\(', regex=True)]
     df_split_industry = get_sub_df(df_need_split_industry, BY_INDUSTRY)
@@ -1118,10 +1142,10 @@ from collections import Counter
 # os.chdir(r'C:\Users\hbao\Downloads\NOC')
 
 # Linux directory
-#os.chdir(r'/home/sadnan/Downloads/noccodeproject')
+#os.chdir(r'/home/sadnan/Downloads/noccodeproject_v5')
 
 # TEXT = open('train.txt').read()
-# TEXT = open('nocjobtitle.txt').read()
+#TEXT = open('nocjobtitle.txt').read()
 TEXT = open(here() / 'resources' / 'nocjobtitle.txt').read()
 
 def tokens(text):
@@ -1198,10 +1222,10 @@ def case_of(text):
             str)
 
 
-WORDS = tokens(TEXT)
-COUNTS = Counter(WORDS)
+#WORDS = tokens(TEXT)
+#COUNTS = Counter(WORDS)
 
 # In[8]:
 
 
-correct_text('BED AND BREAKFEST')
+#correct_text('BED AND BREAKFEST')
