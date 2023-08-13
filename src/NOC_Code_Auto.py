@@ -456,7 +456,7 @@ def stemsentence(sentence):
 
 def get_sub_df(df_orig, flag):
     df_sub = pd.DataFrame(
-        columns=['Current Job Title', 'NOC code', 'Current Industry', 'origin job title', 'origin industry'])
+        columns=['Participant ID', 'Current Job Title', 'NOC code', 'Current Industry', 'origin job title', 'origin industry'])
     if flag == CORRECT:
         for i in range(len(df_orig)):
             industry = df_orig.loc[df_orig.index[i], 'Current Industry']
@@ -605,6 +605,7 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
         split_title_result = []  # after spliting title,only match title not industry
         split_title_idx = []
 
+        participant_id = df_excel.loc[df_excel.index[i], 'Participant ID'] # adding Parcipitant ID column
         current_job_title = df_excel.loc[df_excel.index[i], 'Current Job Title']
         provided_job_title = current_job_title  # in order to be the same as input
         current_job_titles = ''  # split title
@@ -775,8 +776,11 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
 
                 if not run_note:
                     df_re = df_re.append(
-                        {'Current Job Title': provided_job_title, 'NOC code by program': '\'' + noc_code,
-                         'noc_title': match_result_title, 'weight': match_result_weight,
+                        {'Participant ID': participant_id,
+                         'Current Job Title': provided_job_title, 
+                         'NOC code by program': '\'' + noc_code,
+                         'noc_title': match_result_title, 
+                         'weight': match_result_weight,
                          'NOC code': '\'' + noc_code_known,
                          'Current Industry': current_industry, 'first position': fp, 'second position': sp,
                          'third position': tp, 'fourth position': frp, 'note': '',
@@ -809,7 +813,9 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
 
             else:
                 if not run_note:
-                    df_re = df_re.append({'Current Job Title': provided_job_title, 'NOC code by program': '',
+                    df_re = df_re.append({'Participant ID': participant_id,
+                                          'Current Job Title': provided_job_title, 
+                                          'NOC code by program': '',
                                           'noc_title': '', 'weight': '',
                                           'NOC code': '\'' + noc_code_known,
                                           'Current Industry': current_industry, 'first position': '',

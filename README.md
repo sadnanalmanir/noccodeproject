@@ -58,16 +58,16 @@ this code indicate the major and minor groups to which the unit group belongs.
 
 ### Step-1
 
-The source data is an Excel file titled `NOC-spreadsheet.xlsx` which contains three 
-specific column-headers in no specific order: `Current Job Title`, `NOC code`, and `Current Industry`.
+The source data is an Excel file titled `NOC-spreadsheet.xlsx` which contains specific column-headers in no specific order: `Participant ID`, `Current Job Title`, `NOC code`, and `Current Industry`.
 
 A sample file `NOC-spreadsheet_BACKUP.xlsx` is provided with existing data. Rename it to 
 `NOC-spreadsheet.xlsx` and the script is ready to run. 
  
-Alternatively, create `NOC-spreadsheet.xlsx` file with three columns:
-* Column-1 header: `Current Job Title`
-* Column-2 header: `NOC code`
-* Column-3 header: `Current Industry`
+Alternatively, create `NOC-spreadsheet.xlsx` file with the columns:
+* Column-1 header: `Participant ID`
+* Column-2 header: `Current Job Title`
+* Column-3 header: `NOC code`
+* Column-4 header: `Current Industry`
 
 ### Step-2
 
