@@ -6,19 +6,24 @@
 
 from __future__ import division
 import pandas as pd
-import re, os, time
-import string
+import time
 from difflib import get_close_matches
-from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem.porter import *
+#from nltk.stem.snowball import *
+from nltk.stem.lancaster import *
+#from nltk.stem import WordNetLemmatizer
 import nltk
 from numpy import random
+import operator
 from pyprojroot import here
 
 nltk.download('stopwords')
 nltk.download('punkt')
 porter = PorterStemmer()
+lacaster = LancasterStemmer()
+#porter = SnowballStemmer('english')
+#lemmatizer = WordNetLemmatizer()
 
 synonym = {'BABY SETTING': 'BABYSITTER'}
 new_stop_words = ['owner']  # 'owner'
@@ -37,15 +42,31 @@ from collections import Counter
 # os.chdir(r'C:\Users\hbao\Downloads\NOC')
 
 # Linux directory
-# os.chdir(r'/home/sadnan/PycharmProjects/noccodeproject')
+#os.chdir(r'/home/sadnan/Downloads/noccodeproject')
 # TEXT = open('train.txt').read()
-# TEXT = open('resources/nocjobtitle.txt').read()
+#TEXT = open('nocjobtitle.txt').read()
 # here() points to the project root directory
 TEXT = open(here() / 'resources' / 'nocjobtitle.txt').read()
 
 # set the title of the sheet to process
+#SHEET_TITLE = 'Sheet1'
+#SHEET_TITLE = 'Managers in Agriculture'
 SHEET_TITLE = 'Service Advisor'
-
+#SHEET_TITLE = 'Account Manager'
+#SHEET_TITLE = 'Real Estate Broker'
+#SHEET_TITLE = 'Labourer'
+#SHEET_TITLE = 'Customer Care'
+#SHEET_TITLE = 'Clerk'
+#SHEET_TITLE = 'Associate Career Transition Con'
+#SHEET_TITLE = 'House Cleaning'
+#SHEET_TITLE = 'Gen. Manager of fabrication etc'
+#SHEET_TITLE = 'Transport truck drivers'
+#SHEET_TITLE = 'Other professional engineers'
+#SHEET_TITLE = 'Janitors, caretakers etc'
+#SHEET_TITLE = 'Delivery& courier service drive'
+#SHEET_TITLE = 'Central control process oper'
+#SHEET_TITLE = 'Automotive services tech. etc'
+#SHEET_TITLE = 'light duty cleaners'
 
 def tokens(text):
     "List all the word tokens (consecutive letters) in a text. Normalize to lowercase."
@@ -392,6 +413,7 @@ def match_results_leadstatement(results, industry):
 
 
 # match split title results' description by industry key words
+# FIX @@@ This method is not effective if the industry contains multiple words, because the search would be useless @@@
 def match_split_result_desc(results, industry):
     pattern = '.*' + industry.replace(' ', '.*?')
     p = re.compile(r'\b' + industry + r'\b')
@@ -444,7 +466,7 @@ def removestopwords(sentence):
             after_sentence.append(" ")
     return "".join(after_sentence)
 
-
+# using the porter stemmer
 def stemsentence(sentence):
     token_words = word_tokenize(sentence)
     token_words
@@ -454,6 +476,15 @@ def stemsentence(sentence):
         stem_sentence.append(" ")
     return "".join(stem_sentence).strip(' ')
 
+# using the lancaster stemmer
+def stemsentence2(sentence):
+    token_words = word_tokenize(sentence)
+    token_words
+    stem_sentence = []
+    for word in token_words:
+        stem_sentence.append(lacaster.stem(word))
+        stem_sentence.append(" ")
+    return "".join(stem_sentence).strip(' ')
 
 def get_sub_df(df_orig, flag):
     df_sub = pd.DataFrame(
@@ -504,7 +535,7 @@ def get_sub_df(df_orig, flag):
                                         'NOC code': df_orig.loc[df_orig.index[i], 'NOC code'],
                                         'Current Industry': industry, 'origin job title': job_title,
                                         'origin industry': industry}, ignore_index=True)
-                # stemming the job title and store the origin title and industry
+    # stemming the job title and store the origin title and industry
     if flag == STEM_WORD:
         for i in range(len(df_orig)):
             industry = df_orig.loc[df_orig.index[i], 'Current Industry']
@@ -512,7 +543,8 @@ def get_sub_df(df_orig, flag):
             # .strip(' ').strip('-').strip('\\').strip('/').strip(',')
             # job_title_check = df_orig.loc[df_orig.index[i],'correct job title']
             if job_title.strip(' '):
-                df_sub = df_sub.append({'Current Job Title': stemsentence(job_title),
+
+                df_sub = df_sub.append({'Current Job Title':    stemsentence(job_title),
                                         'NOC code': df_orig.loc[df_orig.index[i], 'NOC code'],
                                         'Current Industry': industry, 'origin job title': job_title,
                                         'origin industry': industry}, ignore_index=True)
@@ -586,23 +618,91 @@ def search_minorgroup(results, keywords):
         return results
 
 
+def get_updated_ranking(p, candidate_rank, candidates, param):
+    #print('trying to match pattern : ', p)
+    rank = 0
+    for item in candidates:
+        result = p.findall(stemsentence2(df.loc[df['Noc_code'] == item[-1], param].iloc[0].lower()))
+        if len(result) > 0:
+            #print("Matched: ", result, " for code ", item[-1])
+            rank += len(result)
+            candidate_rank[str(item[-1])] = candidate_rank[str(item[-1])] + len(result)
+
+    return candidate_rank
+
+
+def exclude_unrelated_candidates(curr_job_title, curr_industry, candidates):
+    #print('==========================')
+    #print('Candidates : ', candidates)
+    candidate_rank = {}
+    for item in candidates:
+        candidate_rank[str(item[-1])] = 0
+    #print('Initial Ranking: ', candidate_rank)
+    ranking = 0
+    rank_lead_statement = 0
+    rank_main_duties = 0
+    rank_emp_req = 0
+    final_candidates = []
+
+
+    split_curr_job_title = re.split("[,/\-()&]", curr_job_title)
+    further_split_curr_job_title = [phrase.split(' ') for phrase in split_curr_job_title]
+    flat_curr_job_title = [item for sublist in further_split_curr_job_title for item in sublist]
+
+    #print(flat_curr_job_title)
+
+    #curr_job_titles = curr_job_title.split(' ')
+    #print('Split title by whitespace: ', curr_job_titles)
+    for each_job_part in flat_curr_job_title:
+        if len(each_job_part) > 3:
+            p = re.compile(r'\b' + stemsentence2(each_job_part.strip(' ')) + r'\b')
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'lead_statement')
+            #print('Updated Ranking in lead statement: ', candidate_rank)
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'main_duties')
+            #print('Updated Ranking in main duties: ', candidate_rank)
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'Emp_req')
+            #print('Updated Ranking in employee requirements: ', candidate_rank)
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'job_title')
+            #print('Updated Ranking in job titles: ', candidate_rank)
+
+    split_curr_industry = re.split("[,/\-()&]", curr_industry)
+    further_split_curr_industry = [phrase.split(' ') for phrase in split_curr_industry]
+    flat_curr_industry = [item for sublist in further_split_curr_industry for item in sublist]
+
+    #print(flat_curr_industry)
+
+    #curr_industries = curr_industry.split(' ')
+    #print('trying to match stemmed word : ')
+    for each_industry_part in flat_curr_industry:
+        if len(each_industry_part) > 3:
+            p = re.compile(r'\b' + stemsentence2(each_industry_part.strip(' ')) + r'\b')
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'lead_statement')
+            #print('Updated Ranking in lead statement: ', candidate_rank)
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'main_duties')
+            #print('Updated Ranking in main duties: ', candidate_rank)
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'Emp_req')
+            #print('Updated Ranking in employee requirements: ', candidate_rank)
+            candidate_rank = get_updated_ranking(p, candidate_rank, candidates, 'job_title')
+            #print('Updated Ranking in job titles: ', candidate_rank)
+    # get the key based on the maximum weight of the value
+    highest_ranked_code = max(candidate_rank.items(), key=operator.itemgetter(1))[0]
+    #print('NOC Code with highest ranking: ', highest_ranked_code)
+    for candidate in candidates:
+        if candidate[-1] == int(highest_ranked_code):
+            final_candidates.append(candidate)
+    #print('final candidate: ', final_candidates)
+    return final_candidates
+
 # match_type: 1 -> exact_match; 2 -> minor_exact_match
+
+
 def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
     for i in range(len(df_excel)):
         count = 0
         match_result = []
-        match_by_industry = []
-        match_lead_by_industry = []
-        match_by_group_title = []
-        match_by_skill_type = []
-        match_by_major_group = []
-        match_by_minor_group = []
         matched_titles = []  # for analysing the results with same weight
         matched_codes = []
         type_code = []  # skill type code
-        major_code = []  # major group code
-        minor_code = []  # minor group code
-        noc_code_known = ''
         split_title_result = []  # after spliting title,only match title not industry
         split_title_idx = []
 
@@ -625,10 +725,6 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                     current_job_titles = current_job_title.split('(')
                 for k in range(len(current_job_titles)):
                     for j in range(len(df)):
-                        lead_stm = df.loc[df.index[j], 'lead_statement'].lower()
-                        man_duty = df.loc[df.index[j], 'main_duties'].lower()
-                        emp_req = df.loc[df.index[j], 'Emp_req'].lower()
-                        unit_title = df.loc[df.index[j], 'group_title'].lower()
                         noc_code_source = df.loc[df.index[j], 'Noc_code']
                         if current_job_titles[k].strip(' '):
                             if match_type == 2:  # minor spelling error match
@@ -655,10 +751,16 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                             else:
                                 split_title_result.append(result)
                                 split_title_idx.append(k)
-
+                    # FIX @@@ This break has to be brought back early, or combine results from all pervious iterations
+                    # and store them into match_results @@@
+                    # This is an extra step at the end when it imposes break. The problem is that if the previous
+                    # iteration has any candidate in match_results, then the current iteration will find all
+                    # candidates but will break out because the if condition will be true. This only works if the previous
+                    # iteration does not produce anything inside match_results
                     if match_result:
-                        break  #
+                        break  # FIX @@@ Does this mean the loop stops once there is a candidate for a single iteration? @@@
                     elif split_title_result:
+                        # FIX @@@ This choice of result is based on nothing, just picking the first one without any context @@@
                         match_result.append(split_title_result[0])
                         current_job_title = current_job_titles[split_title_idx[0]]  # search key values
             else:
@@ -698,7 +800,6 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                         else:
                             result = exact_match(current_job_title.strip(' ').lower(),
                                                  df.loc[df.index[j], 'job_title'].lower())
-
                     if result:
                         result.append(noc_code_source)
                         match_result.append(result)
@@ -746,8 +847,14 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                             match_result = match_lead_by_industry
 
                 if match_result:
-                    max_match_result = max(match_result, key=len)  # get the max weight
+                    #print('Job title: ', current_job_title, ' Candidates: ', match_result)
+                    # @@@ FIX excluding unrelated candidates based on stemming @@@
+                    if len(match_result) > 1: # more than one element
+                        max_match_result = max(exclude_unrelated_candidates(current_job_title, current_industry, match_result), key=len) # key=len can be avoided as there will be one element
+                    else:
+                        max_match_result = max(match_result, key=len)  # get the max weight
 
+                    #print('max match result', max_match_result)
                     noc_code = str(max_match_result[-1]).zfill(4)
                     # print('code_list',i,code_list[i])
 
@@ -767,7 +874,7 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                             count = count + 1
                             matched_titles.append(match_result[k])
                             matched_codes.append(match_result[k][-1])
-
+                    #print('matched codes ', matched_codes)
                     match_result_title = max_match_result[1]
                     match_result_weight = max_match_result[0]
                 else:
@@ -778,10 +885,8 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                 if not run_note:
                     df_re = df_re.append(
                         {'Participant ID': participant_id,
-                         'Current Job Title': provided_job_title, 
-                         'NOC code by program': '\'' + noc_code,
-                         'noc_title': match_result_title, 
-                         'weight': match_result_weight,
+                         'Current Job Title': provided_job_title, 'NOC code by program': '\'' + noc_code,
+                         'noc_title': match_result_title, 'weight': match_result_weight,
                          'NOC code': '\'' + noc_code_known,
                          'Current Industry': current_industry, 'first position': fp, 'second position': sp,
                          'third position': tp, 'fourth position': frp, 'note': '',
@@ -798,7 +903,11 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                     else:
                         origin_job_title = df_excel.loc[df_excel.index[i], 'origin job title']
                         origin_industry = df_excel.loc[df_excel.index[i], 'origin industry']
-
+                    #print('run_note', matched_codes)
+                    #for c in matched_codes:
+                    #    print(type(c), c, current_job_title, noc_code, match_result_title, match_result_weight, current_noc_code, matched_codes, current_job_title)
+                    #    print('\'' + str(c).zfill(4))
+                    #print('#here: ', df_re['matched Noc codes'])
                     df_re.loc[(df_re['Current Job Title'] == origin_job_title) & (
                                 df_re['Current Industry'] == origin_industry),
                               ['NOC code by program', 'noc_title', 'weight', 'NOC code',
@@ -812,11 +921,14 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                                                                                        matched_codes],
                                                                                       current_job_title]  # ,'matched titles' ,str(matched_titles)
 
+                    # @@@ the execution does not come here @@@
+                    #print('do somwthing')
+                    #print('##here: ')
+                    #print('$here: ', df_re.loc[1])
             else:
                 if not run_note:
                     df_re = df_re.append({'Participant ID': participant_id,
-                                          'Current Job Title': provided_job_title, 
-                                          'NOC code by program': '',
+                                          'Current Job Title': provided_job_title, 'NOC code by program': '',
                                           'noc_title': '', 'weight': '',
                                           'NOC code': '\'' + noc_code_known,
                                           'Current Industry': current_industry, 'first position': '',
@@ -855,11 +967,11 @@ start = time.time()
 df_skilltype = pd.read_csv(here() / 'resources' / 'NOC_skilltype.csv')
 df_mag = pd.read_csv(here() / 'resources' / 'NOC_majorgroup.csv')
 df_mig = pd.read_csv(here() / 'resources' / 'NOC_minorgroup.csv')
-
+# select SHEET_TITLE
 df_excel = pd.read_excel(file, sheet_name=SHEET_TITLE, header=0,
                          converters={'NOC code': str, 'Current Job Title': str, 'Current Industry': str},
                          na_filter=False)  # ,na_filter = False
-df_re = pd.DataFrame(columns=['Current Job Title', 'NOC code by program', 'noc_title', 'weight', 'NOC code',
+df_re = pd.DataFrame(columns=['Participant ID', 'Current Job Title', 'NOC code by program', 'noc_title', 'weight', 'NOC code',
                               'Current Industry', 'first position', 'second position', 'third position',
                               'fourth position',
                               'note', 'matched Noc codes', 'searched key words'])  # ,'matched titles'
@@ -940,7 +1052,6 @@ for i in range(3, 7):
     df_re = get_noc_code(df_excel=df_empty, df_re=df_re, match_type=i, run_note=CORRECT)
 
 df_re.to_csv(here() / 'title_noc_result_byprogram.csv', sep=',')
-
 end = time.time()
 print('time', (end - start) / 60)
 
@@ -1007,10 +1118,10 @@ from collections import Counter
 # os.chdir(r'C:\Users\hbao\Downloads\NOC')
 
 # Linux directory
-# os.chdir(r'/home/sadnan/PycharmProjects/noccodeproject')
+#os.chdir(r'/home/sadnan/Downloads/noccodeproject')
 
 # TEXT = open('train.txt').read()
-# TEXT = open('resources/nocjobtitle.txt').read()
+# TEXT = open('nocjobtitle.txt').read()
 TEXT = open(here() / 'resources' / 'nocjobtitle.txt').read()
 
 def tokens(text):
