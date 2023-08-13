@@ -24,4 +24,11 @@ jobs:
         python -m pip install --upgrade pip      
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Run Python script
-      run: python src/preprocess.py        
+      run: |
+        # Run preprocessing script
+        python src/preprocess.py
+        # Run NOC code generation script based on the preprocessed SHEET_TITLE = 'p_Labourer'
+        python src/NOC_Code_Auto.py
+        # Analyse the results
+        python src/result_analysis.py
+        
