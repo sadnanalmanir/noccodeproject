@@ -18,5 +18,6 @@ COPY . .
 # COPY ./data ./data
 
 # Remove '#' to run the specific python script
-CMD [ "python", "./src/NOC_Code_Auto.py" ]
+CMD [ "python", "./src/preprocess.py" ]
+# CMD [ "python", "./src/NOC_Code_Auto.py" ]
 # CMD [ "python", "./src/result_analysis.py" ]

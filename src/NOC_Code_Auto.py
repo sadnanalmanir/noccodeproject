@@ -48,12 +48,22 @@ from collections import Counter
 # here() points to the project root directory
 TEXT = open(here() / 'resources' / 'nocjobtitle.txt').read()
 
-# set the title of the sheet to process
+# set the title for running on processed spreadsheet that starts with p_
+SHEET_TITLE = 'p_Labourer'
+#SHEET_TITLE = 'p_Other professional engineers'
+#SHEET_TITLE = 'p_Janitors, caretakers etc'
+#SHEET_TITLE = 'p_Delivery courier service'
+#SHEET_TITLE = 'p_control process oper'
+#SHEET_TITLE = 'p_Automotive serv tech'
+#SHEET_TITLE = 'p_light duty cleaners'
+#SHEET_TITLE = 'p_Managers in Agriculture'
+
+# Set title for running on unprocessed spredsheet
 #SHEET_TITLE = 'Sheet1'
 #SHEET_TITLE = 'Sheet_V4_Run_not_a_match_split_title'
 #SHEET_TITLE = 'Sheet_V4_Run_match_split_title'
 #SHEET_TITLE = 'Managers in Agriculture'
-SHEET_TITLE = 'Service Advisor'
+#SHEET_TITLE = 'Service Advisor'
 #SHEET_TITLE = 'Account Manager'
 #SHEET_TITLE = 'Real Estate Broker'
 #SHEET_TITLE = 'Labourer'
