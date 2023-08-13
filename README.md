@@ -81,6 +81,7 @@ Go to the project directory:
 ```bash
 $ cd /path/to/noccodeproject
 ```
+To run on a specific Sheet, set the title of the sheet as SHEET_TITLE = 'Service Advisor'.
 
 Run  NOC_Code_Auto.py using the following command:
 ```bash

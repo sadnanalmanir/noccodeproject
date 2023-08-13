@@ -43,7 +43,8 @@ from collections import Counter
 # here() points to the project root directory
 TEXT = open(here() / 'resources' / 'nocjobtitle.txt').read()
 
-
+# set the title of the sheet to process
+SHEET_TITLE = 'Service Advisor'
 
 
 def tokens(text):
@@ -745,7 +746,7 @@ def get_noc_code(df_excel, df_re, match_type=1, run_note=None):
                             match_result = match_lead_by_industry
 
                 if match_result:
-                    max_match_result = max(match_result)  # get the max weight
+                    max_match_result = max(match_result, key=len)  # get the max weight
 
                     noc_code = str(max_match_result[-1]).zfill(4)
                     # print('code_list',i,code_list[i])
@@ -855,7 +856,7 @@ df_skilltype = pd.read_csv(here() / 'resources' / 'NOC_skilltype.csv')
 df_mag = pd.read_csv(here() / 'resources' / 'NOC_majorgroup.csv')
 df_mig = pd.read_csv(here() / 'resources' / 'NOC_minorgroup.csv')
 
-df_excel = pd.read_excel(file, sheet_name='Sheet1', header=0,
+df_excel = pd.read_excel(file, sheet_name=SHEET_TITLE, header=0,
                          converters={'NOC code': str, 'Current Job Title': str, 'Current Industry': str},
                          na_filter=False)  # ,na_filter = False
 df_re = pd.DataFrame(columns=['Current Job Title', 'NOC code by program', 'noc_title', 'weight', 'NOC code',
